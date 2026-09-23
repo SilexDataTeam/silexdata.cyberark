@@ -3,9 +3,9 @@ name: setup-collection-repo
 description: >-
   One-time GitHub setup for a silexdata.* collection repository after the
   Bootstrap collection workflow has run - removes the template-only workflows,
-  stores the release secrets without exposing them, enables GitHub Pages,
-  protects the default branch, and later locks in the required CI checks. Also
-  used to rotate RELEASE_TOKEN or GALAXY_API_KEY.
+  stores the release secrets without exposing them, enables GitHub Pages, lets
+  the rules sync open its PRs, protects the default branch, and later locks in
+  the required CI checks. Also used to rotate RELEASE_TOKEN or GALAXY_API_KEY.
 disable-model-invocation: true
 argument-hint: "[OWNER/REPO]"
 ---
@@ -50,12 +50,14 @@ with an explanation if any fails:
 
 ## 1. Remove the template-only workflows
 
-Only if `.github/workflows/bootstrap.yml` or `selfcheck.yml` still exist. Do this
-**before step 4**: once the branch is protected, a direct push is refused.
+Only if `.github/workflows/bootstrap.yml`, `refresh-galaxy-token.yml` or
+`selfcheck.yml` still exist. Do this **before step 4**: once the branch is
+protected, a direct push is refused.
 
 ```sh
 git pull --ff-only
-git rm .github/workflows/bootstrap.yml .github/workflows/selfcheck.yml
+git rm --ignore-unmatch .github/workflows/bootstrap.yml \
+  .github/workflows/refresh-galaxy-token.yml .github/workflows/selfcheck.yml
 git commit -m "chore: remove collection_skeleton template-only workflows"
 git push
 ```
@@ -91,21 +93,43 @@ with a notice rather than failing. Nothing is published below 1.0.0 in any case.
 bash "${CLAUDE_SKILL_DIR}/scripts/configure-repo.sh" pages OWNER/REPO
 ```
 
+### Let the rules sync open its PRs
+
+```sh
+bash "${CLAUDE_SKILL_DIR}/scripts/configure-repo.sh" actions-prs OWNER/REPO
+```
+
+Turns on "Allow GitHub Actions to create and approve pull requests", so the
+**Sync Claude rules** workflow can propose `.claude/` drift as a PR. An
+organization policy can forbid it; the script then says so and exits cleanly,
+because the workflow falls back to warning with a one-click link. Tell the user
+which happened. Either way, a sync PR opened by the workflow needs a maintainer
+to select **Approve workflows to run** on it before its checks report.
+
 ## 4. Protect the default branch
 
 ```sh
 bash "${CLAUDE_SKILL_DIR}/scripts/configure-repo.sh" protect OWNER/REPO RELEASE_LOGIN [APPROVALS]
 ```
 
-Creates a ruleset requiring a pull request (0 approvals unless given), and
-forbidding force-pushes and deletion. Only `RELEASE_LOGIN` - the identity
-`RELEASE_TOKEN` acts as - may push directly, for releases. Re-running it updates
-the ruleset and keeps any required checks already locked in.
+Creates a ruleset requiring a pull request with 1 approving review (pass
+APPROVALS to change it), and forbidding direct pushes, force-pushes and
+deletion. Two bypasses, nothing broader:
 
-If step 2 was deferred, ask the user which account will own `RELEASE_TOKEN`, and
-re-run this step if that changes. If GitHub rejects the `User` bypass actor,
-stop and report it. Do **not** substitute a broader bypass, such as every
-repository admin, without the user deciding to.
+- `RELEASE_LOGIN`, the owner of `RELEASE_TOKEN`, may push directly, for the
+  release workflow's release commit and tag. GitHub checks the token's owner,
+  not the `github-actions[bot]` name on the commit, so this is a bypass for that
+  account as a whole: tell the user it can also push to the default branch
+  without a PR.
+- Repository admins may bypass, but only inside a PR - for example to merge
+  their own PR, which they cannot approve themselves. They cannot push directly.
+
+Re-running it updates the ruleset and keeps any required checks already locked
+in. Adding a bypass is a permission grant: confirm `RELEASE_LOGIN` with the user
+before running it. If step 2 was deferred, ask the user which account will own
+`RELEASE_TOKEN`, and re-run this step if that changes. Do **not** substitute a
+broader bypass without the user deciding to. The built-in GitHub Actions
+identity cannot be used instead: GitHub rejects it as a bypass actor.
 
 ## 5. Lock in the required checks - after the first PR's CI has passed
 
