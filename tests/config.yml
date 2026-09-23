@@ -2,4 +2,7 @@
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
 modules:
-  python_requires: ">=3.6"
+  # get_pas_object is an action plugin, and module_utils is only ever imported
+  # by it and the lookup plugin, so nothing here runs on a managed node. Test
+  # modules/module_utils on the controller's Python versions only.
+  python_requires: controller
