@@ -5,10 +5,10 @@
 # The namespace of the collection. This can be a company/brand/organization or product namespace under which all
 # content lives. May only contain alphanumeric lowercase characters and underscores. Namespaces cannot start with
 # underscores or numbers and cannot contain consecutive underscores
-namespace: {{ namespace }}
+namespace: silexdata
 
 # The name of the collection. Has the same character restrictions as 'namespace'
-name: {{ collection_name }}
+name: cyberark
 
 # The version of the collection. Must be compatible with semantic versioning
 #
@@ -24,18 +24,13 @@ readme: README.md
 
 # A list of the collection's content authors. Can be just the name or in the format 'Full Name <email> (url)
 # @nicks:irc/im.site#channel'
-{# Rendered from the `authors` extra var that bootstrap.yml passes. ansible-galaxy injects the placeholder
-    'your name <example@domain.com>' when none is given, so that falls back to the org default. #}
-{% set _authors = authors if authors != ['your name <example@domain.com>'] else ['Silex Data Solutions <info@silexdata.com>'] %}
 authors:
-{% for _author in _authors %}
-  - '{{ _author | replace("'", "''") }}'
-{% endfor %}
+  - 'Silex Data Solutions <info@silexdata.com>'
+  - 'Caleb Denney <cdenney@silexdata.com>'
 
 ### OPTIONAL but strongly recommended
 # A short summary description of the collection
-{% set _description = description if description != 'your collection description' else 'TODO: describe the ' ~ collection_name ~ ' collection' %}
-description: '{{ _description | replace("'", "''") }}'
+description: 'Ansible collection providing modules and plugins for retrieving credentials from CyberArk''s Central Credential Provider (CCP).'
 
 # Either a single license or a list of licenses for content inside of a collection. Ansible Galaxy currently only
 # accepts L(SPDX,https://spdx.org/licenses/) licenses. This key is mutually exclusive with 'license_file' -
@@ -62,16 +57,16 @@ tags:
 dependencies: {}
 
 # The URL of the originating SCM repository
-repository: {{ repository if 'example.com' not in repository else 'https://github.com/SilexDataTeam/' ~ namespace ~ '.' ~ collection_name }}
+repository: https://github.com/SilexDataTeam/silexdata.cyberark
 
 # The URL to any online docs
-documentation: {{ documentation if 'example.com' not in documentation else 'https://galaxy.ansible.com/ui/repo/published/' ~ namespace ~ '/' ~ collection_name ~ '/docs/' }}
+documentation: https://galaxy.ansible.com/ui/repo/published/silexdata/cyberark/docs/
 
 # The URL to the homepage of the collection/project
-homepage: {{ homepage if 'example.com' not in homepage else 'https://www.silexdata.com/' }}
+homepage: https://www.silexdata.com/
 
 # The URL to the collection issue tracker
-issues: {{ issues if 'example.com' not in issues else 'https://github.com/SilexDataTeam/' ~ namespace ~ '.' ~ collection_name ~ '/issues' }}
+issues: https://github.com/SilexDataTeam/silexdata.cyberark/issues
 
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the build
 # artifact. A pattern is matched from the relative path of the file or directory of the collection directory. This

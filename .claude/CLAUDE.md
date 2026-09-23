@@ -1,100 +1,43 @@
-# silexdata.collection_skeleton
+<!--
+SPDX-FileCopyrightText: Silex Data Solutions
+SPDX-License-Identifier: Apache-2.0
+-->
 
-This repository is the source of truth for Ansible collection CI at Silex Data
-Solutions. It performs **three distinct jobs at once**, and knowing which one
-you are touching matters before you change anything.
+# silexdata.cyberark
 
-## The three roles
+An Ansible collection maintained by Silex Data Solutions.
 
-| # | Role | Lives on | Consumed by |
-| --- | --- | --- | --- |
-| 1 | **GitHub repository template** | `main`, repo root | "Use this template" → `bootstrap.yml` |
-| 2 | **`ansible-galaxy` collection skeleton** | `main`, `skeleton/` | `ansible-galaxy collection init --collection-skeleton skeleton` |
-| 3 | **CI source of truth** | the orphan **`ci`** branch | every collection repo, via `uses: ...@v1` |
-
-Roles 1 and 2 coexist because the galaxy-skeleton payload is confined to
-`skeleton/`, leaving the repo root free. Role 3 lives on a separate branch
-because a template copies only the default branch — see below.
-
-```text
-main
-  .github/workflows/{lint,nox,coverage,docs,changelog,release}.yml
-                             thin callers - copied into new repos by role 1
-  .github/workflows/bootstrap.yml    role 1: one-time setup, workflow_dispatch
-  .github/workflows/selfcheck.yml    proves role 2 still works
-  skeleton/                  role 2: the collection init payload
-
-ci  (orphan - no shared history with main)
-  .github/workflows/reusable-*.yml   role 3: the actual CI logic
-  .github/actions/                   composite actions shared cross-repo
-  .github/workflows/selftest.yml     tests `ci` itself; never called by a collection
-  tests/                             step-logic tests that selftest.yml runs
-```
-
-## Why the CI lives on an orphan branch
-
-A GitHub template copies **only the default branch**. If the reusable workflows
-sat on `main`, every generated collection would receive six inert copies — and
-`GITHUB_TOKEN` cannot delete anything under `.github/workflows/`, so no
-automation could clean them up. Keeping them off `main` reduces the leftovers
-in a new repo to `bootstrap.yml` and `selfcheck.yml`, which cannot move because
-they need real event triggers.
-
-A tag may point at a commit on any branch, so `@v1` resolves on `ci` while
-`main` stays clean.
-
-It is an **orphan** branch, and nothing rebases it. The reusable workflows are
-self-contained — they reference nothing else in the repo, and `actions/checkout`
-inside them checks out the *caller's* repo — so there is nothing on `main` to
-stay in sync with. Do not add a scheduled rebase: a `schedule` trigger only
-fires for workflows on the default branch, and a bot force-pushing a branch
-containing workflow files hits the `GITHUB_TOKEN` restriction anyway.
+CI for this repository is **not defined here**. The workflows under
+`.github/workflows/` are thin callers; all logic lives in
+[silexdata.collection_skeleton](https://github.com/SilexDataTeam/silexdata.collection_skeleton),
+which is the single source of truth for collection CI. Fix CI there, not here.
 
 ## Rules
 
-@rules/architecture.md
+@rules/workflow.md
 @rules/licensing.md
+@rules/testing.md
+@rules/ci.md
 
-## The constraint that shapes everything
+## Layout
 
-`GITHUB_TOKEN` is **categorically forbidden** from creating, updating or
-deleting anything under `.github/workflows/`, and no `permissions:` key can
-grant it — there is no `workflows:` key; writing one is a parse error. The
-push is rejected by git's receive path:
+- `plugins/` — modules, lookups, `module_utils/`, `doc_fragments/`
+- `tests/unit/` — pytest unit tests
+- `tests/integration/targets/` — one target per module, plus the
+  `setup_cyberark` role every other target depends on
+- `changelogs/fragments/` — one fragment per PR (CI enforces this)
 
-```text
-refusing to allow a GitHub App to create or update workflow
-`.github/workflows/ci.yml` without `workflows` permission
-```
-
-This is why `bootstrap.yml` is built to leave that directory **untouched**: the
-thin caller workflows arrive with the template copy and are byte-identical to
-the copies in `skeleton/.github/workflows/`, so bootstrap's rsync produces no
-diff there. `selfcheck.yml` enforces that byte-identity — if the two copies
-drift, bootstrap breaks in a confusing way.
-
-SSH pushes are *not* subject to this restriction, which is why manual cleanup
-from a local clone works where automation cannot.
-
-## Before you change anything
-
-- **Editing a `reusable-*.yml`?** You are changing CI for every collection in
-  the org. Nothing pins a SHA; they pin `@v1`, so the change lands everywhere
-  as soon as you move that tag. Change it through a PR into `ci`, where
-  `selftest.yml` lints the workflows and runs `tests/` against their steps.
-- **Editing a caller workflow?** Change it in **both** `.github/workflows/` and
-  `skeleton/.github/workflows/`, identically.
-- **Editing `skeleton/`?** Run the local verification below; `collection init`
-  failures are destructive (a templating error `rmtree`s the output directory).
-
-## Local verification
+## Local checks
 
 ```sh
-ansible-galaxy collection init silexdata.testcoll \
-  --collection-skeleton skeleton --init-path /tmp/skeltest -e @vars.json
-cd /tmp/skeltest/silexdata/testcoll
-yamllint --strict . && reuse lint && ansible-galaxy collection build
+pre-commit run --all-files     # everything CI's Lint job runs
+nox                            # every default antsibull-nox session, as CI's "Run extra sanity tests" job runs them
+nox -e license-check           # licensing on its own: reuse lint + antsibull-nox's per-file check
+nox -e ansible-test-sanity     # sanity tests locally (CI runs these as a matrix)
 ```
 
-Never point `--init-path` at a real repository root: `--force` deletes the
-target directory's contents, `.git` included.
+## Setting up this repository
+
+`/setup-collection-repo` applies the GitHub settings a template copy does not
+carry: secrets, Pages, branch protection and required checks. See
+`rules/workflow.md`.

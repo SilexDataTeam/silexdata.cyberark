@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
-# antsibull-nox configuration for the {{ namespace }}.{{ collection_name }} collection.
+# antsibull-nox configuration for the silexdata.cyberark collection.
 # Loaded by noxfile.py via antsibull_nox.load_antsibull_nox_toml().
 # Run `nox --list` to see all available sessions.
 # Run `nox` to execute all default sessions.
@@ -116,8 +116,8 @@ min_version = "2.14"
 # Not in the default run because live tests typically require real credentials
 # for whatever service this collection targets.
 # Run explicitly: nox -e ansible-test-integration-default-<ansible_core>
-# Dry-run (no credentials) still passes; setup_{{ collection_name }} gates live
-# tests on service availability via the setup_{{ collection_name }}_service_available
+# Dry-run (no credentials) still passes; setup_cyberark gates live
+# tests on service availability via the setup_cyberark_service_available
 # fact.
 [sessions.ansible_test_integration_w_default_container]
 default = false
@@ -128,7 +128,7 @@ min_version = "2.14"
 # which should point at a dry-run/.invalid host and cause live tests to be
 # skipped.
 [sessions.ansible_test_integration_w_default_container.ansible_vars_from_env_vars]
-# TODO: replace with the real setup_{{ collection_name }}_* variables your
-# setup_{{ collection_name }} integration role's defaults/main.yml declares.
-setup_{{ collection_name }}_endpoint = "{{ collection_name | upper }}_ENDPOINT"
-setup_{{ collection_name }}_require_service = "{{ collection_name | upper }}_REQUIRE_SERVICE"
+# TODO: replace with the real setup_cyberark_* variables your
+# setup_cyberark integration role's defaults/main.yml declares.
+setup_cyberark_endpoint = "CYBERARK_ENDPOINT"
+setup_cyberark_require_service = "CYBERARK_REQUIRE_SERVICE"

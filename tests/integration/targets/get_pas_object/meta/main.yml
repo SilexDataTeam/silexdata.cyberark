@@ -4,4 +4,4 @@
 # Run the collection setup role first to initialize variables and verify the
 # target service is reachable before exercising this module.
 dependencies:
-  - setup_{{ collection_name }}
+  - setup_cyberark

@@ -6,12 +6,12 @@
 # integration_config.yml is git-ignored and must never be committed.
 
 # TODO: after renaming tests/integration/targets/setup_EXAMPLE/ to
-# setup_{{ collection_name }}/, override the placeholder credentials declared
+# setup_cyberark/, override the placeholder credentials declared
 # in that role's defaults/main.yml here, e.g.:
-# setup_{{ collection_name }}_endpoint: "https://api.example.com"
-# setup_{{ collection_name }}_username: "..."
-# setup_{{ collection_name }}_password: "..."
+# setup_cyberark_endpoint: "https://api.example.com"
+# setup_cyberark_username: "..."
+# setup_cyberark_password: "..."
 
 # Fail the run (instead of warning and skipping live tests) when the service
 # is unreachable. Recommended for pipelines that require live coverage.
-# setup_{{ collection_name }}_require_service: true
+# setup_cyberark_require_service: true

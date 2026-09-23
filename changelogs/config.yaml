@@ -34,7 +34,7 @@ sections:
     - Bugfixes
   - - known_issues
     - Known Issues
-title: "{{ namespace | capitalize }} {{ collection_name | capitalize }}"
+title: "Silexdata Cyberark"
 trivial_section_name: trivial
 use_fqcn: true
 vcs: auto

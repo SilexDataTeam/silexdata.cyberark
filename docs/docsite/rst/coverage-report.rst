@@ -10,5 +10,5 @@ workflow's "Generate coverage summary page" step, which runs the
 `silexdata.collection_skeleton <https://github.com/SilexDataTeam/silexdata.collection_skeleton>`_)
 from that build's coverage data. If you're seeing this placeholder, the
 generation step didn't run - view the `latest published coverage report
-<https://silexdatateam.github.io/{{ namespace }}.{{ collection_name }}/coverage/>`_
+<https://silexdatateam.github.io/silexdata.cyberark/coverage/>`_
 instead.

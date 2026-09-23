@@ -1,185 +1,125 @@
 <!--
+Copyright (c) Silex Data Solutions
 SPDX-FileCopyrightText: Silex Data Solutions
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# silexdata.collection_skeleton
+# Silexdata Cyberark Collection
 
-The source of truth for Ansible collection CI at Silex Data Solutions.
+[![Lint](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/lint.yml)
+[![Nox (sanity + units)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml)
+[![Coverage (integration)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/coverage.yml)
 
-This repository does **three** things at once:
+Ansible collection providing modules and plugins for retrieving credentials from CyberArk's Central Credential Provider (CCP).
 
-1. **A GitHub repository template.** "Use this template" → run one workflow →
-   you have a working collection repo.
-2. **An `ansible-galaxy` collection skeleton.** `skeleton/` is a valid
-   `--collection-skeleton` payload, usable directly from the command line.
-3. **The CI source of truth.** Every collection repo's workflows are ~10-line
-   callers that delegate to the reusable workflows, so CI is fixed in one place
-   rather than copy-pasted into N repos. Those reusable workflows live on the
-   orphan [**`ci`** branch](https://github.com/SilexDataTeam/silexdata.collection_skeleton/tree/ci),
-   not on `main`.
+This repository contains the `silexdata.cyberark` Ansible Collection.
 
-> **Looking for the actual CI logic?** It is on the
-> [`ci` branch](https://github.com/SilexDataTeam/silexdata.collection_skeleton/tree/ci).
-> It is kept off `main` because a repository template copies the default branch,
-> and six inert reusable workflows in every collection is worse than one extra
-> branch here. A tag can point at a commit on any branch, so `@v1` resolves
-> there while `main` stays clean.
+## Code of Conduct
 
-## Creating a new collection
+We follow [Ansible Code of Conduct](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html) in all our interactions within this project.
 
-### From the template (recommended)
+If you encounter abusive behavior violating the [Ansible Code of Conduct](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html), please refer to the [policy violations](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html#policy-violations) section of the Code of Conduct for information on how to raise a complaint.
 
-1. **Use this template** → create your repo, named `silexdata.<name>`.
-2. Actions tab → **Bootstrap collection** → Run workflow, filling in the
-   namespace, collection name, description and authors.
-3. Review the commit it pushes. It generates the collection from `skeleton/`,
-   renames the placeholder integration targets, and replaces the template's
-   own files with the collection's.
-4. Clone the repository over SSH and run **`/setup-collection-repo`** in Claude
-   Code. It removes the two template-only workflows (see
-   [Leftover files](#leftover-files)), stores the release secrets without
-   exposing them, enables GitHub Pages, and protects the default branch. The
-   cleanup push is also what starts the collection's **first CI run**:
-   bootstrap's own commit is pushed with `GITHUB_TOKEN`, and those pushes do not
-   trigger workflows.
-5. Land real content through a pull request. Once that PR's CI has passed,
-   re-run the skill's `lock-checks` step so branch protection requires those
-   checks from then on.
+## External requirements
 
-Nothing is published to Galaxy until you choose to. The collection starts at
-0.0.1, merges below 1.0.0 only accumulate changelog fragments, and the first
-release, exactly 1.0.0, is cut by merging a PR that carries a `major_changes`
-fragment. Until the release secrets are configured, the Release workflow skips
-with a notice.
+Some modules and plugins require external libraries. Please check the requirements for each plugin or module you use in the documentation to find out which requirements are needed.
 
-Nothing else needs a secret: lint, tests, coverage and docs all run on the
-automatic `GITHUB_TOKEN`. Every step the skill performs can also be done by
-hand; its scripts live in `.claude/skills/setup-collection-repo/scripts/`.
+## Included content
 
-### From the command line
+Please check the included content on the [Ansible Galaxy page for this collection](https://galaxy.ansible.com/ui/repo/published/silexdata/cyberark/).
 
-```sh
-cat > vars.json <<'JSON'
-{
-  "namespace": "silexdata",
-  "collection_name": "example",
-  "description": "Ansible collection for Example.",
-  "authors": ["Silex Data Solutions <info@silexdata.com>"],
-  "repository": "https://github.com/SilexDataTeam/silexdata.example",
-  "issues": "https://github.com/SilexDataTeam/silexdata.example/issues",
-  "homepage": "https://www.silexdata.com/",
-  "documentation": "https://galaxy.ansible.com/ui/repo/published/silexdata/example/docs/"
-}
-JSON
+## Using this collection
 
-ansible-galaxy collection init silexdata.example \
-  --collection-skeleton skeleton --init-path ./out -e @vars.json
+You must install this collection from [Ansible Galaxy](https://galaxy.ansible.com/ui/repo/published/silexdata/cyberark/) using the `ansible-galaxy` command-line tool, regardless of your Ansible installation type:
+
+```shell
+ansible-galaxy collection install silexdata.cyberark
 ```
 
-Then rename the two placeholder target directories, which `ansible-galaxy`
-cannot template (it renders file *contents*, never *names*):
-
-```sh
-cd out/silexdata/example/tests/integration/targets
-mv EXAMPLE_MODULE manage_example
-mv setup_EXAMPLE  setup_example
-```
-
-> **Warning**
-> Never point `--init-path` at an existing repository root. With `--force`,
-> `ansible-galaxy` deletes the target directory's contents — `.git` included.
-
-## What a generated collection gets
-
-- **CI**: thin callers for lint, nox (sanity/units/docs), coverage, docs,
-  changelog enforcement and release.
-- **Lint**: pre-commit with ruff, yamllint, pymarkdown, ansible-lint,
-  antsibull-changelog, actionlint, antsibull-docs and a build+import check.
-- **Tests**: the `setup_<collection>` integration-target convention, including
-  the service-availability probe and its CI warning annotation.
-- **Docs**: an antsibull-docs Sphinx site deployed to GitHub Pages with the
-  coverage report nested at `/coverage/`.
-- **Release**: changelog-fragment-driven semver bump, tag, and publish to
-  Ansible Galaxy.
-- **Licensing**: a REUSE-compliant tree (`LICENSES/`, `REUSE.toml`, per-file
-  SPDX headers) that passes `reuse lint` from the first commit.
-- **Claude rules**: `.claude/rules/` covering licensing, testing and CI
-  conventions — excluded from the built artifact via `build_ignore`.
-
-## How CI is wired
+You can also include it in a `requirements.yml` file and install it via `ansible-galaxy collection install -r requirements.yml` using the format:
 
 ```yaml
-# a generated collection's .github/workflows/lint.yml, in full
-jobs:
-  lint:
-    uses: SilexDataTeam/silexdata.collection_skeleton/.github/workflows/reusable-lint.yml@v1
+collections:
+- name: silexdata.cyberark
 ```
 
-| Reusable workflow (on the [`ci` branch](https://github.com/SilexDataTeam/silexdata.collection_skeleton/tree/ci)) | Does |
+Note that if you install the collection manually, it will not be upgraded automatically. To upgrade the collection to the latest available version, run the following command:
+
+```bash
+ansible-galaxy collection install silexdata.cyberark --upgrade
+```
+
+You can also install a specific version of the collection, for example, if you need to downgrade when something is broken in the latest version (please report an issue in this repository). Use the following syntax where `X.Y.Z` can be any [available version](https://galaxy.ansible.com/ui/repo/published/silexdata/cyberark/):
+
+```bash
+ansible-galaxy collection install silexdata.cyberark:==X.Y.Z
+```
+
+See [Ansible Using collections](https://docs.ansible.com/ansible/latest/user_guide/collections_using.html) for more details.
+
+## Contributing to this collection
+
+All types of contributions are very welcome.
+
+Every change goes through a pull request: branch from an up-to-date `main`,
+commit with [Conventional Commits](https://www.conventionalcommits.org/)
+messages, add or extend a changelog fragment under `changelogs/fragments/`,
+and open a PR. It merges once every required check has passed; nobody pushes
+to `main` directly. Merging never publishes anything below 1.0.0 - the first
+release is cut deliberately by a `major_changes` fragment. The full procedure
+is in `.claude/rules/workflow.md`.
+
+You can find more information in the [developer guide for collections](https://docs.ansible.com/ansible/devel/dev_guide/developing_collections.html#contributing-to-collections), and in the [Ansible Community Guide](https://docs.ansible.com/ansible/latest/community/index.html).
+
+### Running tests
+
+See [here](https://docs.ansible.com/ansible/devel/dev_guide/developing_collections.html#testing-collections).
+
+## Collection maintenance
+
+To learn how to maintain / become a maintainer of this collection, refer to:
+
+- [Maintainer guidelines](https://github.com/ansible/community-docs/blob/main/maintaining.rst).
+
+It is necessary for maintainers of this collection to be subscribed to:
+
+- The collection itself (the `Watch` button → `All Activity` in the upper right corner of the repository's homepage).
+
+## Publishing New Version
+
+See the [Releasing guidelines](https://github.com/ansible/community-docs/blob/main/releasing_collections.rst) to learn how to release this collection.
+
+## Release notes
+
+See the [changelog](https://github.com/SilexDataTeam/silexdata.cyberark/blob/main/CHANGELOG.md).
+
+## More information
+
+- [Ansible Collection overview](https://github.com/ansible-collections/overview)
+- [Ansible User guide](https://docs.ansible.com/ansible/latest/user_guide/index.html)
+- [Ansible Developer guide](https://docs.ansible.com/ansible/latest/dev_guide/index.html)
+- [Ansible Community code of conduct](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html)
+
+## Licensing
+
+This collection is licensed under the **Apache License, Version 2.0** by
+default - see [COPYING](COPYING) - with two exceptions, each declared in the
+file's own SPDX header. The full license texts are under [LICENSES/](LICENSES).
+
+| Path | License |
 | --- | --- |
-| `reusable-lint.yml` | pre-commit over all files |
-| `reusable-nox.yml` | antsibull-nox default sessions |
-| `reusable-coverage.yml` | ansible-test units + integration across the ansible-core matrix, aggregated into one report, badge and PR comment |
-| `reusable-docs.yml` | antsibull-docs site + coverage report → GitHub Pages |
-| `reusable-changelog.yml` | requires a changelog fragment on every PR |
-| `reusable-release.yml` | version bump, changelog, tag, publish to Galaxy |
+| plugin code in `plugins/` (modules, lookups, filters, doc_fragments, ...) | `GPL-3.0-or-later` |
+| `plugins/module_utils/` | `BSD-2-Clause` |
+| everything else | `Apache-2.0` |
 
-Nothing collection-specific is hardcoded: namespace and name are read from
-`galaxy.yml`, the minimum ansible-core from `meta/runtime.yml`, and the release
-tarball name is derived.
+Plugin code is GPL-3.0-or-later because Ansible requires it for plugins that
+run inside the controller, and ansible-test requires it for modules.
+`module_utils` is BSD-2-Clause because it is copied into the payload that runs
+on managed nodes, where a copyleft license would extend to every third-party
+module importing it.
 
-**To change CI for every collection**, open a PR into the `ci` branch; it
-merges once its `Selftest result` check passes. Then move the `v1` tag.
-Collection repos pin `@v1` and Dependabot bumps them. See that branch's README
-for the procedure.
+Contributions are accepted under these same terms. Before changing any license
+header, read `.claude/rules/licensing.md` - in particular, code adapted from
+another project keeps its original license and attribution.
 
-## Leftover files
-
-A GitHub template copies the default branch, so a new repo also receives
-`bootstrap.yml` and `selfcheck.yml`. Both are inert — they guard on
-`github.repository` and skip. The reusable workflows are *not* among the
-leftovers, which is the whole reason they live on the `ci` branch.
-
-Remove them from a local clone:
-
-```sh
-git pull
-git rm .github/workflows/bootstrap.yml .github/workflows/selfcheck.yml
-git commit -m "chore: remove collection_skeleton template-only workflows"
-git push
-```
-
-This has to be done over SSH rather than by a workflow. `GITHUB_TOKEN` is not
-permitted to create, modify or delete anything under `.github/workflows/`, and
-routing the change through a pull request does not help: the PR's branch must
-be pushed first, and that push is rejected the same way. Automating it would
-need a PAT or GitHub App holding the Workflows permission — an org-wide
-credential able to rewrite CI anywhere, which is a poor trade for deleting two
-inert files. See [`.claude/CLAUDE.md`](.claude/CLAUDE.md).
-
-Nothing else from the template survives: bootstrap clears the template's own
-files before laying the generated collection over the top, keeping only
-`.github/workflows/`.
-
-## Contributing to this repo
-
-Read [`.claude/CLAUDE.md`](.claude/CLAUDE.md) first — it documents the three
-roles and the constraints that shape them.
-
-The one rule that bites hardest: the caller workflows are **duplicated**, at
-`.github/workflows/` and `skeleton/.github/workflows/`, and must stay
-byte-identical. `selfcheck.yml` fails the build if they drift.
-
-Verify a change to `skeleton/` locally:
-
-```sh
-ansible-galaxy collection init silexdata.testcoll \
-  --collection-skeleton skeleton --init-path /tmp/skeltest -e @vars.json
-cd /tmp/skeltest/silexdata/testcoll
-yamllint --strict . && reuse lint && ansible-galaxy collection build
-```
-
-`selfcheck.yml` runs exactly this on every push, plus assertions that no `.j2`
-files survived, that the `.gitkeep` placeholders are git-trackable, and that
-`.claude/` and `.github/` stay out of the built artifact.
+Run `nox -e license-check` to verify compliance.

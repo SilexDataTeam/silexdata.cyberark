@@ -1,0 +1,16 @@
+---
+# SPDX-FileCopyrightText: Silex Data Solutions
+# SPDX-License-Identifier: Apache-2.0
+# TODO: after renaming this directory to your real module/target name, inherit
+# setup_cyberark role outputs into properly prefixed variables
+# named after your target (never consume setup_cyberark_* directly
+# from tasks/ — only from here). For example, if your target is named
+# "your_module_name":
+#
+# your_module_name_endpoint: "{{ setup_cyberark_endpoint }}"
+# your_module_name_auth: "{{ setup_cyberark_auth }}"
+#
+# Whether the service was reachable (set by the setup_cyberark
+# role). Live, service-dependent tests are gated on this:
+#
+# your_module_name_service_available: "{{ setup_cyberark_service_available }}"
