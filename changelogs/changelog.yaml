@@ -1,3 +1,27 @@
 ---
 ancestor: null
-releases: {}
+releases:
+  1.0.0:
+    changes:
+      major_changes:
+        - Initial release. The ``get_pas_object`` lookup plugin, and a module of the
+          same name, retrieve account properties such as the password from CyberArk
+          CCP's AIM Web Service, with optional client-certificate authentication.
+          Both run on the controller, so only the controller needs the ``requests``
+          library and network access to CCP.
+      release_summary: Initial release of the ``silexdata.cyberark`` collection, for
+        retrieving credentials from CyberArk's Central Credential Provider (CCP).
+    fragments:
+      - import-cyberark-ccp.yml
+    modules:
+      - description: Retrieve a credential from CyberArk Central Credential Provider
+          (CCP).
+        name: get_pas_object
+        namespace: ''
+    plugins:
+      lookup:
+        - description: Retrieve a credential from CyberArk Central Credential Provider
+            (CCP).
+          name: get_pas_object
+          namespace: null
+    release_date: '2026-09-23'

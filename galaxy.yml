@@ -17,7 +17,7 @@ name: cyberark
 # fragments until a PR carrying a `major_changes` fragment cuts 1.0.0. (Starting
 # at 1.0.0 instead would make the first release 1.1.0, since the version is
 # bumped relative to this value.) See .claude/rules/ci.md.
-version: "0.0.1"
+version: 1.0.0
 
 # The path to the Markdown (.md) readme file. This path is relative to the root of the collection
 readme: README.md
