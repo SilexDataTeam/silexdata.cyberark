@@ -1,27 +1,68 @@
 ---
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
-# Expected-failure tests for this module.
+# Expected-failure tests for get_pas_object.
 #
 # These exercise the argument-spec validation that AnsibleModule performs
-# *before* any network request is made (required params, required_one_of,
-# mutually_exclusive), so they are safe to run with no live service.
-#
-# TODO: replace the module FQCN and parameters below with your real module,
-# and adapt the assertions to whatever required/mutually-exclusive parameters
-# it actually declares.
+# *before* any network request is made - required parameters, and client_key's
+# dependency on client_cert - so they are safe to run with no live CyberArk CCP
+# service.
 
-- name: "Expected-failures | TODO: fails when a required parameter is omitted"
-  # <namespace>.<collection_name>.your_module_name:
-  #   ...parameters with at least one required one omitted...
-  ansible.builtin.debug:
-    msg: "TODO: replace this task with a real invocation missing a required parameter."
-  register: example_module_missing_required
+- name: Expected-failures | Fails when url is missing
+  silexdata.cyberark.get_pas_object:
+    app_id: "{{ get_pas_object_app_id }}"
+    object_query: "{{ get_pas_object_query }}"
+  register: get_pas_object_missing_url
   ignore_errors: true
 
-- name: Expected-failures | Assert required-parameter validation failed
+- name: Expected-failures | Assert missing url is rejected
   ansible.builtin.assert:
     that:
-      - example_module_missing_required is failed
-    fail_msg: "Module should fail when required parameters are missing."
-    success_msg: "Module correctly required its mandatory parameters."
+      - get_pas_object_missing_url is failed
+    fail_msg: "Module should fail when the required url parameter is missing."
+    success_msg: "Module correctly required the url parameter."
+
+- name: Expected-failures | Fails when app_id is missing
+  silexdata.cyberark.get_pas_object:
+    url: "{{ get_pas_object_url }}"
+    object_query: "{{ get_pas_object_query }}"
+  register: get_pas_object_missing_app_id
+  ignore_errors: true
+
+- name: Expected-failures | Assert missing app_id is rejected
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_missing_app_id is failed
+    fail_msg: "Module should fail when the required app_id parameter is missing."
+    success_msg: "Module correctly required the app_id parameter."
+
+- name: Expected-failures | Fails when object_query is missing
+  silexdata.cyberark.get_pas_object:
+    url: "{{ get_pas_object_url }}"
+    app_id: "{{ get_pas_object_app_id }}"
+  register: get_pas_object_missing_query
+  ignore_errors: true
+
+- name: Expected-failures | Assert missing object_query is rejected
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_missing_query is failed
+    fail_msg: "Module should fail when the required object_query parameter is missing."
+    success_msg: "Module correctly required the object_query parameter."
+
+- name: Expected-failures | Fails when client_key is given without client_cert
+  silexdata.cyberark.get_pas_object:
+    url: "{{ get_pas_object_url }}"
+    app_id: "{{ get_pas_object_app_id }}"
+    object_query: "{{ get_pas_object_query }}"
+    client_key: "not-a-real-key"
+  register: get_pas_object_key_without_cert
+  ignore_errors: true
+
+- name: Expected-failures | Assert client_key without client_cert is rejected
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_key_without_cert is failed
+      - "'client_cert' in get_pas_object_key_without_cert.msg"
+    fail_msg: "Module should reject client_key without client_cert."
+    success_msg: "Module correctly required client_cert for client_key."

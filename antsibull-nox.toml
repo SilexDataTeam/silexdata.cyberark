@@ -128,7 +128,9 @@ min_version = "2.14"
 # which should point at a dry-run/.invalid host and cause live tests to be
 # skipped.
 [sessions.ansible_test_integration_w_default_container.ansible_vars_from_env_vars]
-# TODO: replace with the real setup_cyberark_* variables your
-# setup_cyberark integration role's defaults/main.yml declares.
-setup_cyberark_endpoint = "CYBERARK_ENDPOINT"
-setup_cyberark_require_service = "CYBERARK_REQUIRE_SERVICE"
+setup_cyberark_url = "CYBERARK_CCP_URL"
+setup_cyberark_app_id = "CYBERARK_CCP_APP_ID"
+setup_cyberark_client_cert = "CYBERARK_CCP_CLIENT_CERT"
+setup_cyberark_client_key = "CYBERARK_CCP_CLIENT_KEY"
+# Set to "true" in CI to fail instead of skipping when the service is down.
+setup_cyberark_require_service = "CYBERARK_CCP_REQUIRE_SERVICE"

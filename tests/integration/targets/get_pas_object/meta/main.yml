@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
 # Run the collection setup role first to initialize variables and verify the
-# target service is reachable before exercising this module.
+# CyberArk CCP service is reachable before exercising the get_pas_object
+# module and lookup plugin.
 dependencies:
   - setup_cyberark

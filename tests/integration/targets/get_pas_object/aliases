@@ -1,5 +1,4 @@
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
-# Offline "dry-run" target: exercises module argument-spec validation only and
-# contacts no external service, so it runs as part of the normal integration
-# suite (no credentials required).
+# This target requires setup_cyberark (declared in meta/main.yml) to
+# initialize variables and probe CyberArk CCP service availability.
