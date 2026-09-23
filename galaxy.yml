@@ -42,6 +42,7 @@ description: 'Ansible collection providing modules and plugins for retrieving cr
 # text, when the first module_utils file arrives. See .claude/rules/licensing.md.
 license:
   - Apache-2.0
+  - GPL-3.0-or-later
 
 # A list of tags you want to associate with the collection for indexing/searching. A tag name has the same character
 # requirements as 'namespace' and 'name'
