@@ -1,33 +1,38 @@
 ---
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
-# Check-mode tests for this module.
+# Check-mode tests for get_pas_object.
 #
 # These are written assuming the module supports check mode: a read-only
-# call must run in check mode and report no changes. They are intentionally
-# NOT conditional on the module's current check-mode support -- if the module
-# does not declare supports_check_mode, Ansible skips it and these assertions
-# fail by design, surfacing the missing check-mode support.
-#
-# TODO: replace the module FQCN and parameters below with your real module
-# and a read-only invocation of it.
+# credential fetch must run in check mode and report no changes, without
+# contacting CyberArk CCP at all (the module short-circuits before making any
+# request). Because no live request is made, this test is service-independent
+# and runs against the dry-run defaults even when setup_cyberark reports the
+# service as unavailable. These assertions are intentionally NOT conditional
+# on the module's current check-mode support -- if the module does not
+# declare supports_check_mode, Ansible skips it and these assertions fail by
+# design, surfacing the missing check-mode support.
 
-- name: "Check-mode | TODO: run a read-only call in check mode"
-  # <namespace>.<collection_name>.your_module_name:
-  #   ...your real parameters...
-  ansible.builtin.debug:
-    msg: "TODO: replace this task with a real check-mode invocation of your module."
+- name: Check-mode | Run a credential fetch in check mode
+  silexdata.cyberark.get_pas_object:
+    url: "{{ get_pas_object_url }}"
+    app_id: "{{ get_pas_object_app_id }}"
+    object_query: "{{ get_pas_object_query }}"
+    client_cert: "{{ get_pas_object_client_cert }}"
+    client_key: "{{ get_pas_object_client_key }}"
   check_mode: true
-  register: example_module_check_mode
+  register: get_pas_object_check_mode
   ignore_errors: true
 
-- name: Check-mode | Assert the module ran in check mode and made no changes
+- name: Check-mode | Assert the module ran in check mode, made no changes, and did not fail
   ansible.builtin.assert:
     that:
-      - example_module_check_mode is not skipped
-      - example_module_check_mode is not failed
-      - example_module_check_mode is not changed
+      - get_pas_object_check_mode is not skipped
+      - get_pas_object_check_mode is not changed
+      - get_pas_object_check_mode is not failed
+      - get_pas_object_check_mode.value is none
     fail_msg: >-
       Module did not run correctly in check mode. The module must declare
-      supports_check_mode=True and make no changes when run in check mode.
-    success_msg: "Module supports check mode and reported no changes."
+      supports_check_mode=True, make no changes, and avoid contacting
+      CyberArk CCP when run in check mode.
+    success_msg: "Module supports check mode and reported no changes without contacting CyberArk CCP."

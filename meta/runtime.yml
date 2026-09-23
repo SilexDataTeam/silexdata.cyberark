@@ -1,7 +1,7 @@
 ---
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
-requires_ansible: '>=2.14.0'
+requires_ansible: '>=2.16.0'
 
 # Content that Ansible needs to load from another location or that has
 # been deprecated/removed. Uncomment and adapt as needed, e.g. when

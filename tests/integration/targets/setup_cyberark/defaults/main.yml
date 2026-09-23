@@ -2,23 +2,21 @@
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
 # Variables owned by the setup_cyberark role (role-name prefixed).
-# TODO: this skeleton cannot know the real auth shape for whatever service
-# this collection targets, so only the generic service-availability variables
-# below are filled in for real. Add the actual placeholder credential
-# variables your setup_cyberark role needs, following the same
-# ".invalid" dry-run convention, e.g.:
-# setup_cyberark_endpoint: "https://dry-run.cyberark.invalid"
-# setup_cyberark_username: "dry-run-user"
-# setup_cyberark_password: "dry-run-password"
-#
-# Using the reserved .invalid TLD (RFC 6761) means the availability probe
-# below reliably reports the service as down during a dry-run, rather than
-# accidentally resolving to something reachable.
+
+# Placeholder CyberArk CCP connection details. Override these in
+# tests/integration/integration_config.yml to run the live (service-dependent)
+# tests against a real CyberArk CCP endpoint. The default host uses the
+# reserved .invalid TLD (RFC 6761) so the availability probe reliably reports
+# the service as down during a dry-run.
+setup_cyberark_url: "https://dry-run.cyberark.invalid"
+setup_cyberark_app_id: "dry-run-app-id"
+setup_cyberark_client_cert: ''
+setup_cyberark_client_key: ''
 
 # Service-availability handling. By default an unreachable service produces a
 # warning and the live tests are skipped. Set this to true (e.g. from the
 # pipeline) to fail the run instead when the service is down.
 setup_cyberark_require_service: false
 
-# Seconds to wait when probing the service endpoint for availability.
+# Seconds to wait when probing the CCP endpoint for availability.
 setup_cyberark_service_probe_timeout: 5

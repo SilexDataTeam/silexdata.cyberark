@@ -1,16 +1,14 @@
 ---
 # SPDX-FileCopyrightText: Silex Data Solutions
 # SPDX-License-Identifier: Apache-2.0
-# TODO: after renaming this directory to your real module/target name, inherit
-# setup_cyberark role outputs into properly prefixed variables
-# named after your target (never consume setup_cyberark_* directly
-# from tasks/ — only from here). For example, if your target is named
-# "your_module_name":
-#
-# your_module_name_endpoint: "{{ setup_cyberark_endpoint }}"
-# your_module_name_auth: "{{ setup_cyberark_auth }}"
-#
-# Whether the service was reachable (set by the setup_cyberark
-# role). Live, service-dependent tests are gated on this:
-#
-# your_module_name_service_available: "{{ setup_cyberark_service_available }}"
+# Inherit setup_cyberark role outputs into properly prefixed get_pas_object
+# variables. Tasks in this role reference only the get_pas_object_* variables.
+get_pas_object_url: "{{ setup_cyberark_url }}"
+get_pas_object_app_id: "{{ setup_cyberark_app_id }}"
+get_pas_object_client_cert: "{{ setup_cyberark_client_cert }}"
+get_pas_object_client_key: "{{ setup_cyberark_client_key }}"
+get_pas_object_query: "Safe=MySafe;Object=MyAccount"
+
+# Whether the CyberArk CCP service was reachable (set by the setup_cyberark
+# role). Live, service-dependent tests are gated on this.
+get_pas_object_service_available: "{{ setup_cyberark_service_available }}"

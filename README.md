@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Silex Data Solutions
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Silexdata Cyberark Collection
+# Silex Data CyberArk Collection
 
 [![Lint](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/lint.yml)
 [![Nox (sanity + units)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml)
@@ -22,7 +22,7 @@ If you encounter abusive behavior violating the [Ansible Code of Conduct](https:
 
 ## External requirements
 
-Some modules and plugins require external libraries. Please check the requirements for each plugin or module you use in the documentation to find out which requirements are needed.
+Some modules and plugins require external libraries. Please check the requirements for each plugin or module you use in the documentation to find out which requirements are needed. The `get_pas_object` module and lookup plugin both require the Python `requests` library. Both run on the controller, whichever host a task targets, so `requests` and network access to CCP are needed there, not on managed nodes.
 
 ## Included content
 
@@ -56,6 +56,28 @@ ansible-galaxy collection install silexdata.cyberark:==X.Y.Z
 ```
 
 See [Ansible Using collections](https://docs.ansible.com/ansible/latest/user_guide/collections_using.html) for more details.
+
+### Retrieving a credential with the `get_pas_object` module
+
+```yaml
+- name: Retrieve a password from CyberArk CCP
+  silexdata.cyberark.get_pas_object:
+    url: https://cyberark.example.com
+    app_id: MyApp
+    object_query: "Safe=MySafe;Object=MyAccount"
+  register: result
+  no_log: true
+```
+
+### Retrieving a credential with the `get_pas_object` lookup plugin
+
+```yaml
+- name: Retrieve a password from CyberArk CCP
+  ansible.builtin.debug:
+    msg: >-
+      {{ lookup('silexdata.cyberark.get_pas_object', 'Safe=MySafe;Object=MyAccount',
+         url='https://cyberark.example.com', app_id='MyApp') }}
+```
 
 ## Contributing to this collection
 
@@ -117,6 +139,14 @@ run inside the controller, and ansible-test requires it for modules.
 `module_utils` is BSD-2-Clause because it is copied into the payload that runs
 on managed nodes, where a copyleft license would extend to every third-party
 module importing it.
+
+### Third-party code
+
+`plugins/module_utils/cyberark_ccp.py` is derived from the CyberArk AIM / CCP
+credential plugin of the [AWX Project](https://github.com/ansible/awx-plugins),
+and keeps AWX's Apache License, Version 2.0, and its attribution. It is
+therefore Apache-2.0 rather than this collection's usual BSD-2-Clause for
+`module_utils`.
 
 Contributions are accepted under these same terms. Before changing any license
 header, read `.claude/rules/licensing.md` - in particular, code adapted from

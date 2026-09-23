@@ -90,8 +90,8 @@ run_no_trailing_whitespace = true
 # "Run extra sanity tests" job - which runs every default session - repeat the
 # whole matrix sequentially. Run them locally with `nox -e ansible-test-sanity`.
 default = false
-# Minimum ansible-core version matches galaxy.yml/meta/runtime.yml requires_ansible (>=2.14.0).
-min_version = "2.14"
+# Minimum ansible-core version matches galaxy.yml/meta/runtime.yml requires_ansible (>=2.16.0).
+min_version = "2.16"
 
 # ---------------------------------------------------------------------------
 # ansible-test units
@@ -100,7 +100,7 @@ min_version = "2.14"
 # Not default, for the same reason as ansible_test_sanity above.
 # Run locally with `nox -e ansible-test-units`.
 default = false
-min_version = "2.14"
+min_version = "2.16"
 
 # ---------------------------------------------------------------------------
 # Execution environment check
@@ -121,14 +121,16 @@ min_version = "2.14"
 # fact.
 [sessions.ansible_test_integration_w_default_container]
 default = false
-min_version = "2.14"
+min_version = "2.16"
 
 # Map Ansible variables to environment variables so CI can inject credentials
 # without committing them. Unset env vars leave the role defaults in place,
 # which should point at a dry-run/.invalid host and cause live tests to be
 # skipped.
 [sessions.ansible_test_integration_w_default_container.ansible_vars_from_env_vars]
-# TODO: replace with the real setup_cyberark_* variables your
-# setup_cyberark integration role's defaults/main.yml declares.
-setup_cyberark_endpoint = "CYBERARK_ENDPOINT"
-setup_cyberark_require_service = "CYBERARK_REQUIRE_SERVICE"
+setup_cyberark_url = "CYBERARK_CCP_URL"
+setup_cyberark_app_id = "CYBERARK_CCP_APP_ID"
+setup_cyberark_client_cert = "CYBERARK_CCP_CLIENT_CERT"
+setup_cyberark_client_key = "CYBERARK_CCP_CLIENT_KEY"
+# Set to "true" in CI to fail instead of skipping when the service is down.
+setup_cyberark_require_service = "CYBERARK_CCP_REQUIRE_SERVICE"

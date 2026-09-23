@@ -6,9 +6,9 @@
 # expected-failures, check-mode). Add a new category by dropping another
 # <category>.yml file into tasks/tests/.
 
-- name: Run all test categories for this target
-  ansible.builtin.include_tasks: "{{ example_module_test_file }}"
+- name: Run all get_pas_object test categories
+  ansible.builtin.include_tasks: "{{ get_pas_object_test_file }}"
   loop: "{{ query('ansible.builtin.fileglob', role_path ~ '/tasks/tests/*.yml') | sort }}"
   loop_control:
-    loop_var: example_module_test_file
-    label: "{{ example_module_test_file | basename }}"
+    loop_var: get_pas_object_test_file
+    label: "{{ get_pas_object_test_file | basename }}"
