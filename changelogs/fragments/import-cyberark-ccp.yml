@@ -1,0 +1,10 @@
+---
+release_summary: >-
+  Initial release of the ``silexdata.cyberark`` collection, for retrieving
+  credentials from CyberArk's Central Credential Provider (CCP).
+major_changes:
+  - Initial release. The ``get_pas_object`` lookup plugin, and a module of the
+    same name, retrieve account properties such as the password from CyberArk
+    CCP's AIM Web Service, with optional client-certificate authentication.
+    Both run on the controller, so only the controller needs the ``requests``
+    library and network access to CCP.
