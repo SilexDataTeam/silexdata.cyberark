@@ -7,8 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 # Silex Data CyberArk Collection
 
 [![Lint](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/lint.yml)
-[![Nox (sanity + units)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml)
-[![Coverage (integration)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/coverage.yml)
+[![Nox](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/nox.yml)
+[![Docs](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/docs.yml)
+[![Coverage](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/SilexDataTeam/silexdata.cyberark/actions/workflows/coverage.yml)
+[![Coverage Report](https://img.shields.io/endpoint?url=https://silexdatateam.github.io/silexdata.cyberark/coverage/coverage-badge.json)](https://silexdatateam.github.io/silexdata.cyberark/coverage/)
 
 Ansible collection providing modules and plugins for retrieving credentials from CyberArk's Central Credential Provider (CCP).
 
@@ -27,6 +29,14 @@ Some modules and plugins require external libraries. Please check the requiremen
 ## Included content
 
 Please check the included content on the [Ansible Galaxy page for this collection](https://galaxy.ansible.com/ui/repo/published/silexdata/cyberark/).
+
+## Documentation
+
+The full collection documentation (module/plugin reference, generated with `antsibull-docs`) is published on
+[GitHub Pages](https://silexdatateam.github.io/silexdata.cyberark/).
+
+The [interactive, line-by-line test coverage report](https://silexdatateam.github.io/silexdata.cyberark/coverage/) is
+published alongside it, reflecting the latest merge to `main`.
 
 ## Using this collection
 
