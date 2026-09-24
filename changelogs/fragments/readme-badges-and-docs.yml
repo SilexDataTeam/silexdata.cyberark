@@ -1,3 +1,4 @@
 ---
 trivial:
   - README - add the Docs and coverage-report badges, and link the documentation published on GitHub Pages.
+  - Release - accept a tag in a manual run, to finish a release whose publishing failed after its commit and tag were pushed.
