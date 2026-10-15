@@ -89,6 +89,35 @@ See [Ansible Using collections](https://docs.ansible.com/ansible/latest/user_gui
          url='https://cyberark.example.com', app_id='MyApp') }}
 ```
 
+### Supplying the connection settings from variables or the environment
+
+Both plugins can leave out their connection settings. Any setting a task or
+lookup does not set is read from an Ansible variable, then from an environment
+variable on the controller:
+
+| Option | Variable | Environment variable |
+| --- | --- | --- |
+| `url` | `cyberark_ccp_url` | `CYBERARK_CCP_URL` |
+| `app_id` | `cyberark_ccp_app_id` | `CYBERARK_CCP_APP_ID` |
+| `webservice_id` | `cyberark_ccp_webservice_id` | `CYBERARK_CCP_WEBSERVICE_ID` |
+| `verify` | `cyberark_ccp_verify` | `CYBERARK_CCP_VERIFY` |
+| `client_cert` | `cyberark_ccp_client_cert` | `CYBERARK_CCP_CLIENT_CERT` |
+| `client_cert_file` | `cyberark_ccp_client_cert_file` | `CYBERARK_CCP_CLIENT_CERT_FILE` |
+| `client_key` | `cyberark_ccp_client_key` | `CYBERARK_CCP_CLIENT_KEY` |
+| `client_key_file` | `cyberark_ccp_client_key_file` | `CYBERARK_CCP_CLIENT_KEY_FILE` |
+
+```yaml
+- name: Retrieve a password, with the connection settings from the environment
+  silexdata.cyberark.get_pas_object:
+    object_query: "Safe=MySafe;Object=MyAccount"
+  register: result
+  no_log: true
+```
+
+To provide these settings from an Ansible Automation Platform or AWX
+credential, follow the guide
+[A CyberArk CCP credential type for AAP and AWX](https://silexdatateam.github.io/silexdata.cyberark/docsite/aap_credential_type.html).
+
 ## Contributing to this collection
 
 All types of contributions are very welcome.

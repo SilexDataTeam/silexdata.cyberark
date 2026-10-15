@@ -118,6 +118,11 @@ notes:
   - The client certificate and key are resolved together. O(client_cert), O(client_cert_file), O(client_key) and
     O(client_key_file) all come from the first of those three sources that sets any of them, so a key is never paired
     with a certificate from another source.
+seealso:
+  - ref: ansible_collections.silexdata.cyberark.docsite.aap_credential_type
+    description: >-
+      Create an AAP or AWX credential type that injects these connection settings
+      as environment variables, extra variables and files.
 requirements:
   - requests >= 2.0
 '''
