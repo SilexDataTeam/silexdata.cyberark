@@ -7,11 +7,18 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
+import os
+
+from ansible.errors import AnsibleActionFail
+from ansible.module_utils.common.arg_spec import ArgumentSpecValidator
+from ansible.module_utils.errors import UnsupportedError
 from ansible.plugins.action import ActionBase
 from ansible_collections.silexdata.cyberark.plugins.module_utils.cyberark_ccp import (
+    FALLBACK_OPTIONS,
     CyberarkCCPError,
     ccp_argument_spec,
     fetch_pas_object,
+    resolve_fallbacks,
 )
 
 
@@ -32,14 +39,8 @@ class ActionModule(ActionBase):
         result = super().run(tmp, task_vars)
         del tmp
 
-        argument_spec = ccp_argument_spec()
-        argument_spec['object_query'] = dict(type='str', required=True, no_log=True)
         # Raises AnsibleActionFail, which fails the task, on invalid arguments.
-        # A key without its certificate cannot authenticate.
-        dummy, args = self.validate_argument_spec(
-            argument_spec=argument_spec,
-            required_by={'client_key': 'client_cert'},
-        )
+        args = self._resolve_args(task_vars)
 
         if self._task.check_mode:
             # Read-only, so there is never a change to predict; skipping the
@@ -55,6 +56,8 @@ class ActionModule(ActionBase):
                 webservice_id=args['webservice_id'],
                 client_cert=args['client_cert'],
                 client_key=args['client_key'],
+                client_cert_file=args['client_cert_file'],
+                client_key_file=args['client_key_file'],
                 verify=args['verify'],
                 object_query_format=args['object_query_format'],
                 object_property=args['object_property'],
@@ -66,3 +69,29 @@ class ActionModule(ActionBase):
 
         result.update(changed=False, value=value)
         return result
+
+    def _resolve_args(self, task_vars):
+        """Return the validated task arguments, with unset connection options filled from variables or the environment.
+
+        Like ActionBase.validate_argument_spec, but over the resolved arguments
+        rather than the task's own, so a value from a variable or environment
+        variable is checked and converted exactly as an argument would be.
+        """
+        try:
+            resolved = resolve_fallbacks(self._task.args, task_vars, os.environ, self._templar.template)
+        except CyberarkCCPError as exc:
+            raise AnsibleActionFail(str(exc)) from exc
+
+        params = {name: value for name, value in self._task.args.items() if name not in FALLBACK_OPTIONS}
+        params.update(resolved)
+
+        argument_spec = ccp_argument_spec()
+        argument_spec['object_query'] = dict(type='str', required=True, no_log=True)
+        validation = ArgumentSpecValidator(argument_spec).validate(params)
+        if validation.error_messages:
+            msg = validation.errors.msg
+            if isinstance(validation.errors[0], UnsupportedError):
+                msg = f'Unsupported parameters for ({self._task.action}) module: {msg}'
+            raise AnsibleActionFail(msg)
+
+        return validation.validated_parameters

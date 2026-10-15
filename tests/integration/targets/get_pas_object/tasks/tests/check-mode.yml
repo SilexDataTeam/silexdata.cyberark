@@ -36,3 +36,27 @@
       supports_check_mode=True, make no changes, and avoid contacting
       CyberArk CCP when run in check mode.
     success_msg: "Module supports check mode and reported no changes without contacting CyberArk CCP."
+
+- name: Check-mode | Run with the connection settings taken from variables
+  silexdata.cyberark.get_pas_object:
+    object_query: "{{ get_pas_object_query }}"
+  vars:
+    # The module's own fallback variables, not role variables: templated, as
+    # they would be from inventory, to cover their rendering.
+    cyberark_ccp_url: "{{ get_pas_object_url }}"  # noqa: var-naming[no-role-prefix]
+    cyberark_ccp_app_id: "{{ get_pas_object_app_id }}"  # noqa: var-naming[no-role-prefix]
+    # Fails boolean conversion unless the module renders it first.
+    cyberark_ccp_verify: "{{ false }}"  # noqa: var-naming[no-role-prefix]
+  check_mode: true
+  register: get_pas_object_check_mode_vars
+  ignore_errors: true
+
+- name: Check-mode | Assert variables supplied the required connection settings
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_check_mode_vars is not skipped
+      - get_pas_object_check_mode_vars is not changed
+      - get_pas_object_check_mode_vars is not failed
+      - get_pas_object_check_mode_vars.value is none
+    fail_msg: "Module did not take url and app_id from the cyberark_ccp_* variables: {{ get_pas_object_check_mode_vars }}"
+    success_msg: "Module took its connection settings from the cyberark_ccp_* variables."

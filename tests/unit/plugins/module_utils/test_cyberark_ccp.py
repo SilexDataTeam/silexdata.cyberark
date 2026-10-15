@@ -10,6 +10,7 @@ __metaclass__ = type
 
 import importlib.util
 import os
+import re
 import sys
 from urllib.parse import parse_qs, urlsplit
 
@@ -17,10 +18,13 @@ import pytest
 import requests
 from ansible_collections.silexdata.cyberark.plugins.module_utils import cyberark_ccp
 from ansible_collections.silexdata.cyberark.plugins.module_utils.cyberark_ccp import (
+    FALLBACK_OPTIONS,
     CyberarkCCPError,
     ccp_argument_spec,
     cert_files,
+    fallback_names,
     fetch_pas_object,
+    resolve_fallbacks,
     resolve_object_property,
 )
 
@@ -86,6 +90,125 @@ def test_argument_spec_hides_every_credential():
     assert spec["object_query_format"]["choices"] == ["Exact", "Regexp"]
 
 
+def test_the_cert_and_key_files_are_paths():
+    spec = ccp_argument_spec()
+    assert spec["client_cert_file"]["type"] == spec["client_key_file"]["type"] == "path"
+
+
+def test_every_fallback_option_is_in_the_argument_spec():
+    assert set(FALLBACK_OPTIONS) <= set(ccp_argument_spec())
+
+
+# resolve_fallbacks
+
+
+def render(value):
+    """Stand-in for Templar.template: renders "{{ name }}" from RENDERED."""
+    if isinstance(value, str) and value.startswith("{{ ") and value.endswith(" }}"):
+        return RENDERED[value[3:-3]]
+    return value
+
+
+RENDERED = {"ccp_host": "https://from-a-template.example.com", "blank": ""}
+
+
+def var(option, value):
+    return {fallback_names(option)[0]: value}
+
+
+def env(option, value):
+    return {fallback_names(option)[1]: value}
+
+
+def resolve(direct=None, variables=None, environ=None):
+    return resolve_fallbacks(direct or {}, variables, environ or {}, render)
+
+
+def test_fallback_names_follow_the_option_name():
+    assert fallback_names("client_cert_file") == ("cyberark_ccp_client_cert_file", "CYBERARK_CCP_CLIENT_CERT_FILE")
+
+
+def test_an_option_set_directly_wins():
+    resolved = resolve({"url": "direct"}, var("url", "variable"), env("url", "environment"))
+    assert resolved == {"url": "direct"}
+
+
+def test_a_variable_beats_the_environment():
+    assert resolve({}, var("app_id", "variable"), env("app_id", "environment")) == {"app_id": "variable"}
+
+
+def test_the_environment_is_the_last_resort():
+    assert resolve({}, {}, env("webservice_id", "environment")) == {"webservice_id": "environment"}
+
+
+def test_options_set_nowhere_are_left_out_for_their_defaults():
+    assert resolve() == {}
+
+
+def test_missing_variables_are_tolerated():
+    assert resolve({}, None, env("url", "environment")) == {"url": "environment"}
+
+
+@pytest.mark.parametrize("empty", [None, ""])
+def test_an_empty_value_falls_through_to_the_next_source(empty):
+    resolved = resolve({"url": empty}, var("url", empty), env("url", "environment"))
+    assert resolved == {"url": "environment"}
+
+
+def test_a_false_value_is_set():
+    assert resolve({"verify": False}, var("verify", True)) == {"verify": False}
+
+
+def test_variables_are_rendered_but_nothing_else_is():
+    resolved = resolve({"app_id": "{{ ccp_host }}"}, var("url", "{{ ccp_host }}"), env("webservice_id", "{{ ccp_host }}"))
+    assert resolved == {
+        "url": "https://from-a-template.example.com",
+        "app_id": "{{ ccp_host }}",
+        "webservice_id": "{{ ccp_host }}",
+    }
+
+
+def test_a_variable_that_renders_empty_falls_through():
+    assert resolve({}, var("url", "{{ blank }}"), env("url", "environment")) == {"url": "environment"}
+
+
+def test_other_options_never_fall_back():
+    environ = {"CYBERARK_CCP_REASON": "r", "CYBERARK_CCP_OBJECT_PROPERTY": "Username"}
+    assert resolve({}, {"cyberark_ccp_reason": "r"}, environ) == {}
+
+
+def test_the_cert_and_key_come_from_the_first_source_that_sets_either():
+    variables = dict(var("client_cert_file", "/var/cert.pem"), **var("client_key_file", "/var/key.pem"))
+    environ = env("client_key", "env-key")
+    resolved = resolve({"client_cert": "direct-cert"}, variables, environ)
+    assert resolved == {"client_cert": "direct-cert"}
+
+
+def test_a_key_is_not_paired_with_a_certificate_from_another_source():
+    with pytest.raises(CyberarkCCPError, match="^cyberark_ccp_client_key_file was given without cyberark_ccp_client_cert or "):
+        resolve({}, var("client_key_file", "/var/key.pem"), env("client_cert", "env-cert"))
+
+
+def test_a_key_given_directly_without_a_cert_names_the_options():
+    with pytest.raises(CyberarkCCPError, match="^client_key was given without client_cert or client_cert_file"):
+        resolve({"client_key": "key"})
+
+
+@pytest.mark.parametrize(
+    ("content", "path"),
+    [("client_cert", "client_cert_file"), ("client_key", "client_key_file")],
+)
+def test_pem_content_and_a_path_from_one_source_conflict(content, path):
+    environ = dict(env("client_cert", "cert"), **env(content, "pem"), **env(path, "/env/pem"))
+    with pytest.raises(CyberarkCCPError, match=f"{fallback_names(content)[1]} and {fallback_names(path)[1]} are mutually exclusive"):
+        resolve({}, {}, environ)
+
+
+def test_the_cert_and_key_files_are_resolved_together():
+    environ = dict(env("client_cert_file", "/env/cert.pem"), **env("client_key_file", "/env/key.pem"))
+    assert resolve({}, {}, environ) == {"client_cert_file": "/env/cert.pem", "client_key_file": "/env/key.pem"}
+
+
 # resolve_object_property
 
 
@@ -145,6 +268,31 @@ def test_a_key_without_a_cert_is_never_written(monkeypatch):
     with cert_files(None, KEY) as cert:
         assert cert is None
     assert written == []
+
+
+def test_cert_and_key_paths_are_used_as_they_are_and_kept(tmp_path):
+    cert_file, key_file = tmp_path / "cert.pem", tmp_path / "key.pem"
+    cert_file.write_text(CERT)
+    key_file.write_text(KEY)
+    with cert_files(None, None, str(cert_file), str(key_file)) as cert:
+        assert cert == (str(cert_file), str(key_file))
+    assert cert_file.exists() and key_file.exists()
+
+
+def test_cert_content_pairs_with_a_key_path(tmp_path):
+    key_file = tmp_path / "key.pem"
+    key_file.write_text(KEY)
+    with cert_files(CERT, None, None, str(key_file)) as (cert_path, key_path):
+        assert key_path == str(key_file)
+        with open(cert_path) as fh:
+            assert fh.read() == CERT
+    assert not os.path.exists(cert_path)
+    assert key_file.exists()
+
+
+def test_a_key_path_without_a_cert_is_not_presented():
+    with cert_files(None, None, None, "/no/cert/for/this/key.pem") as cert:
+        assert cert is None
 
 
 def test_a_temp_file_already_gone_does_not_break_cleanup():
@@ -216,6 +364,56 @@ def test_a_cert_bundling_its_key_is_sent_as_one_file(fake_get):
 def test_a_key_without_a_cert_is_rejected_before_any_request(fake_get):
     with pytest.raises(CyberarkCCPError, match="client_key was given without client_cert"):
         fetch(client_key=KEY)
+    assert fake_get.calls == []
+
+
+def test_a_key_file_without_a_cert_is_rejected_before_any_request(fake_get, tmp_path):
+    key_file = tmp_path / "key.pem"
+    key_file.write_text(KEY)
+    with pytest.raises(CyberarkCCPError, match="client_key_file was given without client_cert or client_cert_file"):
+        fetch(client_key_file=str(key_file))
+    assert fake_get.calls == []
+
+
+@pytest.mark.parametrize(
+    ("content", "path"),
+    [("client_cert", "client_cert_file"), ("client_key", "client_key_file")],
+)
+def test_pem_content_and_a_path_together_are_rejected(fake_get, tmp_path, content, path):
+    pem_file = tmp_path / "pem"
+    pem_file.write_text(CERT)
+    with pytest.raises(CyberarkCCPError, match=f"{content} and {path} are mutually exclusive"):
+        fetch(**{"client_cert": CERT, content: CERT, path: str(pem_file)})
+    assert fake_get.calls == []
+
+
+def test_cert_and_key_files_are_sent_and_kept(fake_get, tmp_path):
+    cert_file, key_file = tmp_path / "cert.pem", tmp_path / "key.pem"
+    cert_file.write_text(CERT)
+    key_file.write_text(KEY)
+    fetch(client_cert_file=str(cert_file), client_key_file=str(key_file))
+    kwargs = fake_get.calls[0][1]
+    assert kwargs["cert"] == (str(cert_file), str(key_file))
+    assert cert_file.exists() and key_file.exists()
+
+
+@pytest.mark.parametrize("option", ["client_cert_file", "client_key_file"])
+def test_a_missing_file_is_rejected_before_any_request(fake_get, tmp_path, option):
+    cert_file = tmp_path / "cert.pem"
+    cert_file.write_text(CERT)
+    missing = str(tmp_path / "missing.pem")
+    args = {"client_cert_file": str(cert_file), option: missing}
+    with pytest.raises(CyberarkCCPError, match=re.escape(f"{option} '{missing}' does not exist or is not a file")):
+        fetch(**args)
+    assert fake_get.calls == []
+
+
+def test_an_empty_file_is_rejected_before_any_request(fake_get, tmp_path):
+    # What an AAP file injector writes for a credential input left blank.
+    empty = tmp_path / "empty.pem"
+    empty.write_text("")
+    with pytest.raises(CyberarkCCPError, match=re.escape(f"client_cert_file '{empty}' is empty")):
+        fetch(client_cert_file=str(empty))
     assert fake_get.calls == []
 
 
