@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Expected-failure tests for get_pas_object.
 #
-# These exercise the argument-spec validation that AnsibleModule performs
-# *before* any network request is made - required parameters, and client_key's
-# dependency on client_cert - so they are safe to run with no live CyberArk CCP
-# service.
+# These exercise the validation done *before* any network request is made -
+# required parameters, client_key's dependency on client_cert, how the
+# cyberark_ccp_* fallback variables combine, and the client certificate and key
+# files - so they are safe to run with no live CyberArk CCP service.
 
 - name: Expected-failures | Fails when url is missing
   silexdata.cyberark.get_pas_object:
@@ -66,3 +66,90 @@
       - "'client_cert' in get_pas_object_key_without_cert.msg"
     fail_msg: "Module should reject client_key without client_cert."
     success_msg: "Module correctly required client_cert for client_key."
+
+- name: Expected-failures | Fails when a certificate is given both as PEM and as a file by variables
+  silexdata.cyberark.get_pas_object:
+    url: "{{ get_pas_object_url }}"
+    app_id: "{{ get_pas_object_app_id }}"
+    object_query: "{{ get_pas_object_query }}"
+  vars:
+    cyberark_ccp_client_cert: "not-a-real-cert"  # noqa: var-naming[no-role-prefix]
+    cyberark_ccp_client_cert_file: "/nonexistent/cert.pem"  # noqa: var-naming[no-role-prefix]
+  register: get_pas_object_cert_twice
+  ignore_errors: true
+
+- name: Expected-failures | Assert the conflicting variables are rejected by name
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_cert_twice is failed
+      - "'cyberark_ccp_client_cert and cyberark_ccp_client_cert_file are mutually exclusive' in get_pas_object_cert_twice.msg"
+    fail_msg: "Module should reject a certificate given both as PEM and as a file: {{ get_pas_object_cert_twice }}"
+    success_msg: "Module correctly rejected the conflicting certificate variables."
+
+- name: Expected-failures | Fails when a variable supplies a key but not its certificate
+  silexdata.cyberark.get_pas_object:
+    url: "{{ get_pas_object_url }}"
+    app_id: "{{ get_pas_object_app_id }}"
+    object_query: "{{ get_pas_object_query }}"
+  vars:
+    cyberark_ccp_client_key_file: "/nonexistent/key.pem"  # noqa: var-naming[no-role-prefix]
+  register: get_pas_object_var_key_without_cert
+  ignore_errors: true
+
+- name: Expected-failures | Assert the key variable without a certificate is rejected by name
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_var_key_without_cert is failed
+      - "'cyberark_ccp_client_key_file was given without cyberark_ccp_client_cert' in get_pas_object_var_key_without_cert.msg"
+    fail_msg: "Module should reject a key variable without a certificate: {{ get_pas_object_var_key_without_cert }}"
+    success_msg: "Module correctly required a certificate for the key variable."
+
+- name: Expected-failures | Fails when client_cert_file does not exist
+  silexdata.cyberark.get_pas_object:
+    url: "{{ get_pas_object_url }}"
+    app_id: "{{ get_pas_object_app_id }}"
+    object_query: "{{ get_pas_object_query }}"
+    client_cert_file: /nonexistent/cert.pem
+  register: get_pas_object_missing_cert_file
+  ignore_errors: true
+
+- name: Expected-failures | Assert the missing certificate file is reported
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_missing_cert_file is failed
+      - "'does not exist or is not a file' in get_pas_object_missing_cert_file.msg"
+    fail_msg: "Module should report a client_cert_file that does not exist: {{ get_pas_object_missing_cert_file }}"
+    success_msg: "Module correctly reported the missing certificate file."
+
+- name: Expected-failures | Fails in the lookup when a variable names a certificate file that does not exist
+  ansible.builtin.set_fact:
+    get_pas_object_lookup_missing_cert_file: "{{ lookup('silexdata.cyberark.get_pas_object', get_pas_object_query) }}"
+  vars:
+    # Every connection setting comes from the lookup's fallback variables.
+    cyberark_ccp_url: "{{ get_pas_object_url }}"  # noqa: var-naming[no-role-prefix]
+    cyberark_ccp_app_id: "{{ get_pas_object_app_id }}"  # noqa: var-naming[no-role-prefix]
+    cyberark_ccp_client_cert_file: /nonexistent/cert.pem  # noqa: var-naming[no-role-prefix]
+  register: get_pas_object_lookup_missing_cert_file_task
+  ignore_errors: true
+
+- name: Expected-failures | Assert the lookup resolved its variables and reported the missing file
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_lookup_missing_cert_file_task is failed
+      - "'does not exist or is not a file' in get_pas_object_lookup_missing_cert_file_task.msg"
+    fail_msg: "Lookup should report the certificate file named by a variable: {{ get_pas_object_lookup_missing_cert_file_task }}"
+    success_msg: "Lookup resolved its variables and reported the missing certificate file."
+
+- name: Expected-failures | Fails in the lookup when url is set nowhere
+  ansible.builtin.set_fact:
+    get_pas_object_lookup_missing_url: "{{ lookup('silexdata.cyberark.get_pas_object', get_pas_object_query, app_id=get_pas_object_app_id) }}"
+  register: get_pas_object_lookup_missing_url_task
+  ignore_errors: true
+
+- name: Expected-failures | Assert the lookup required url
+  ansible.builtin.assert:
+    that:
+      - get_pas_object_lookup_missing_url_task is failed
+      - "'url' in get_pas_object_lookup_missing_url_task.msg"
+    fail_msg: "Lookup should fail when url is not set by any source: {{ get_pas_object_lookup_missing_url_task }}"
+    success_msg: "Lookup correctly required url."

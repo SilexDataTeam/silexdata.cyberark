@@ -44,7 +44,9 @@ def ccp_argument_spec():
         app_id=dict(type='str', required=True, no_log=True),
         webservice_id=dict(type='str', default=''),
         client_cert=dict(type='str', no_log=True),
+        client_cert_file=dict(type='path', no_log=False),
         client_key=dict(type='str', no_log=True),
+        client_key_file=dict(type='path', no_log=False),
         verify=dict(type='bool', default=True),
         object_query_format=dict(type='str', default='Exact', choices=['Exact', 'Regexp']),
         object_property=dict(type='str', default=''),
@@ -52,16 +54,122 @@ def ccp_argument_spec():
     )
 
 
+# Connection options a caller may leave unset, to be read instead from an
+# Ansible variable and then from an environment variable on the controller -
+# the precedence Ansible gives a plugin's own options. fallback_names() derives
+# the two names. Documented by the cyberark_ccp doc fragment.
+FALLBACK_OPTIONS = (
+    'url',
+    'app_id',
+    'webservice_id',
+    'verify',
+    'client_cert',
+    'client_cert_file',
+    'client_key',
+    'client_key_file',
+)
+
+# The client certificate and its key, each given as PEM content or as a path.
+# They are resolved together, from a single source, so a key is never paired
+# with a certificate that came from somewhere else.
+CLIENT_AUTH_OPTIONS = ('client_cert', 'client_cert_file', 'client_key', 'client_key_file')
+
+
 class CyberarkCCPError(Exception):
     """Raised when a CyberArk CCP request fails or its response is unusable."""
 
 
+def fallback_names(option):
+    """Return the (Ansible variable, environment variable) names an option falls back to."""
+    return 'cyberark_ccp_' + option, 'CYBERARK_CCP_' + option.upper()
+
+
+def _is_set(value):
+    # An empty string counts as unset at every level: AAP renders an injector
+    # whose credential input was left blank as one.
+    return value is not None and value != ''
+
+
+def _client_auth_error(given, name_of):
+    """Return why the given client certificate/key options cannot be used together, or None.
+
+    ``given`` holds the CLIENT_AUTH_OPTIONS that are set, and ``name_of`` maps
+    each option to the name the caller set it by, for the message.
+    """
+    for content, path in (('client_cert', 'client_cert_file'), ('client_key', 'client_key_file')):
+        if content in given and path in given:
+            return f'{name_of(content)} and {name_of(path)} are mutually exclusive; set only one of them.'
+
+    if given and 'client_cert' not in given and 'client_cert_file' not in given:
+        # TLS client authentication presents a certificate; the key only proves
+        # ownership of it. A key alone would silently send the request with no
+        # client certificate at all. A key bundled in client_cert's PEM needs no
+        # client_key, so that case is unaffected.
+        key = 'client_key' if 'client_key' in given else 'client_key_file'
+        return (
+            f'{name_of(key)} was given without {name_of("client_cert")} or {name_of("client_cert_file")}. '
+            f'Provide the client certificate too, or pass a PEM that holds both the certificate and its key '
+            f'as {name_of("client_cert")}.'
+        )
+
+    return None
+
+
+def resolve_fallbacks(direct, variables, environ, template):
+    """Resolve the FALLBACK_OPTIONS from the caller's own options, then Ansible variables, then the environment.
+
+    ``template`` renders a variable's value, since plugins receive variables
+    unrendered. Each option is taken from the first source that sets it, except
+    the CLIENT_AUTH_OPTIONS, which all come from the first source that sets any
+    of them. Options set nowhere are left out, so the caller's defaults apply.
+
+    Raises CyberarkCCPError when that source's certificate and key options
+    cannot be used together.
+    """
+    sources = (
+        (direct, lambda option: option, lambda value: value),
+        (variables or {}, lambda option: fallback_names(option)[0], template),
+        (environ, lambda option: fallback_names(option)[1], lambda value: value),
+    )
+
+    def read(source, option):
+        container, name_of, render = source
+        value = container.get(name_of(option))
+        return render(value) if _is_set(value) else None
+
+    resolved = {}
+    for option in FALLBACK_OPTIONS:
+        if option in CLIENT_AUTH_OPTIONS:
+            continue
+        for source in sources:
+            value = read(source, option)
+            if _is_set(value):
+                resolved[option] = value
+                break
+
+    for source in sources:
+        found = {option: read(source, option) for option in CLIENT_AUTH_OPTIONS}
+        found = {option: value for option, value in found.items() if _is_set(value)}
+        if found:
+            error = _client_auth_error(found, source[1])
+            if error:
+                raise CyberarkCCPError(error)
+            resolved.update(found)
+            break
+
+    return resolved
+
+
 @contextlib.contextmanager
-def cert_files(cert_pem, key_pem):
-    """Write PEM strings to temp files and yield the requests-compatible cert argument."""
+def cert_files(cert_pem, key_pem, cert_file=None, key_file=None):
+    """Yield the requests-compatible cert argument for a client certificate and key.
+
+    Each is given as PEM content, which is written to a temp file removed
+    afterwards, or as the path of an existing file, which is used as it is.
+    """
     paths = []
     try:
-        cert_path = key_path = None
+        cert_path, key_path = cert_file, key_file
 
         if cert_pem:
             fd, cert_path = tempfile.mkstemp()
@@ -73,7 +181,9 @@ def cert_files(cert_pem, key_pem):
 
         # A key is only ever presented with its certificate, so never write
         # one that could not be used. fetch_pas_object rejects that input.
-        if key_pem and cert_pem:
+        if not cert_path:
+            key_path = None
+        elif key_pem:
             fd, key_path = tempfile.mkstemp()
             try:
                 os.write(fd, key_pem.encode('utf-8'))
@@ -113,6 +223,8 @@ def fetch_pas_object(
     webservice_id='',
     client_cert=None,
     client_key=None,
+    client_cert_file=None,
+    client_key_file=None,
     verify=True,
     object_query_format='Exact',
     object_property='',
@@ -121,18 +233,31 @@ def fetch_pas_object(
 ):
     """Fetch an object from CyberArk CCP and return the requested property value.
 
-    Raises CyberarkCCPError on any failure: missing "requests" library, transport
-    error, non-2xx response, unparsable JSON, or a missing property.
+    Raises CyberarkCCPError on any failure: an unusable client certificate or
+    key, missing "requests" library, transport error, non-2xx response,
+    unparsable JSON, or a missing property.
     """
-    if client_key and not client_cert:
-        # TLS client authentication presents a certificate; the key only proves
-        # ownership of it. A key alone would silently send the request with no
-        # client certificate at all. A key bundled in client_cert's PEM needs no
-        # client_key, so that case is unaffected.
-        raise CyberarkCCPError(
-            'client_key was given without client_cert. Provide the client certificate too, '
-            'or pass a PEM that holds both the certificate and its key as client_cert.'
+    given = {
+        option
+        for option, value in (
+            ('client_cert', client_cert),
+            ('client_cert_file', client_cert_file),
+            ('client_key', client_key),
+            ('client_key_file', client_key_file),
         )
+        if value
+    }
+    error = _client_auth_error(given, lambda option: option)
+    if error:
+        raise CyberarkCCPError(error)
+
+    for option, path in (('client_cert_file', client_cert_file), ('client_key_file', client_key_file)):
+        # Checked here because requests raises a bare OSError for a missing
+        # file, and an empty one fails only later, inside the TLS handshake.
+        if path and not os.path.isfile(path):
+            raise CyberarkCCPError(f'{option} {path!r} does not exist or is not a file.')
+        if path and not os.path.getsize(path):
+            raise CyberarkCCPError(f'{option} {path!r} is empty.')
 
     if not HAS_REQUESTS:
         raise CyberarkCCPError('The Python "requests" library is required for this operation.')
@@ -151,7 +276,7 @@ def fetch_pas_object(
     request_url = urljoin(url, '/'.join([webservice_id, 'api', 'Accounts']))
 
     try:
-        with cert_files(client_cert, client_key) as cert:
+        with cert_files(client_cert, client_key, client_cert_file, client_key_file) as cert:
             response = requests.get(
                 request_url + request_qs,
                 timeout=timeout,

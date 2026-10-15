@@ -1,0 +1,13 @@
+---
+minor_changes:
+  - >-
+    get_pas_object - the module and lookup plugin read each connection option they are not given
+    (``url``, ``app_id``, ``webservice_id``, ``verify`` and the client certificate and key)
+    from a ``cyberark_ccp_*`` Ansible variable, then a ``CYBERARK_CCP_*`` environment variable on the controller.
+  - >-
+    get_pas_object - add the ``client_cert_file`` and ``client_key_file`` options, to give the client
+    certificate and key as paths to PEM files on the controller instead of as PEM content.
+trivial:
+  - >-
+    Docs - add a guide to creating an AAP or AWX credential type that injects the ``get_pas_object``
+    connection settings, and link it from the plugins' See Also.

@@ -54,6 +54,15 @@ EXAMPLES = r'''
 - name: Retrieve multiple passwords in one lookup call
   ansible.builtin.debug:
     msg: "{{ query('silexdata.cyberark.get_pas_object', 'Safe=A;Object=One', 'Safe=A;Object=Two', url=url, app_id=app_id) }}"
+
+- name: Retrieve a password with the connection settings taken from variables
+  ansible.builtin.debug:
+    msg: "{{ lookup('silexdata.cyberark.get_pas_object', 'Safe=MySafe;Object=MyAccount') }}"
+  vars:
+    cyberark_ccp_url: https://cyberark.example.com
+    cyberark_ccp_app_id: MyApp
+    cyberark_ccp_client_cert_file: /etc/ssl/client.crt
+    cyberark_ccp_client_key_file: /etc/ssl/client.key
 '''
 
 RETURN = r'''
@@ -64,23 +73,40 @@ _raw:
   elements: str
 '''
 
+import os
+
 from ansible.errors import AnsibleLookupError
 from ansible.plugins.lookup import LookupBase
 from ansible_collections.silexdata.cyberark.plugins.module_utils.cyberark_ccp import (
+    FALLBACK_OPTIONS,
     CyberarkCCPError,
     fetch_pas_object,
+    resolve_fallbacks,
 )
 
 
 class LookupModule(LookupBase):
     def run(self, terms, variables=None, **kwargs):
-        self.set_options(var_options=variables, direct=kwargs)
+        # The variable and environment fallbacks are resolved here, the same
+        # way as for the module, rather than declared as vars/env sources:
+        # Ansible would hand those over unrendered, and could pair a client key
+        # with a certificate from another source.
+        try:
+            resolved = resolve_fallbacks(kwargs, variables, os.environ, self._templar.template)
+        except CyberarkCCPError as exc:
+            raise AnsibleLookupError(str(exc)) from exc
+
+        direct = {name: value for name, value in kwargs.items() if name not in FALLBACK_OPTIONS}
+        direct.update(resolved)
+        self.set_options(var_options=variables, direct=direct)
 
         url = self.get_option('url')
         app_id = self.get_option('app_id')
         webservice_id = self.get_option('webservice_id')
         client_cert = self.get_option('client_cert')
         client_key = self.get_option('client_key')
+        client_cert_file = self.get_option('client_cert_file')
+        client_key_file = self.get_option('client_key_file')
         verify = self.get_option('verify')
         object_query_format = self.get_option('object_query_format')
         object_property = self.get_option('object_property')
@@ -96,6 +122,8 @@ class LookupModule(LookupBase):
                     webservice_id=webservice_id,
                     client_cert=client_cert,
                     client_key=client_key,
+                    client_cert_file=client_cert_file,
+                    client_key_file=client_key_file,
                     verify=verify,
                     object_query_format=object_query_format,
                     object_property=object_property,

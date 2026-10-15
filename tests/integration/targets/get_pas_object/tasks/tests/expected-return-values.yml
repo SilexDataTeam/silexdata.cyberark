@@ -43,6 +43,29 @@
         fail_msg: "Unexpected response from the get_pas_object module: {{ get_pas_object_module_result }}"
         success_msg: "get_pas_object module returned the expected response shape."
 
+    - name: Expected-return-values | Fetch a credential with the connection settings taken from variables
+      silexdata.cyberark.get_pas_object:
+        object_query: "{{ get_pas_object_query }}"
+      vars:
+        cyberark_ccp_url: "{{ get_pas_object_url }}"  # noqa: var-naming[no-role-prefix]
+        cyberark_ccp_app_id: "{{ get_pas_object_app_id }}"  # noqa: var-naming[no-role-prefix]
+        cyberark_ccp_client_cert: "{{ get_pas_object_client_cert }}"  # noqa: var-naming[no-role-prefix]
+        cyberark_ccp_client_key: "{{ get_pas_object_client_key }}"  # noqa: var-naming[no-role-prefix]
+      register: get_pas_object_vars_result
+      ignore_errors: true
+
+    - name: Expected-return-values | Assert the variable-configured module round-tripped a request to CCP
+      ansible.builtin.assert:
+        that:
+          - get_pas_object_vars_result is not changed
+          - >-
+            (get_pas_object_vars_result is succeeded and
+             get_pas_object_vars_result.value is defined) or
+            (get_pas_object_vars_result is failed and
+             'CyberArk' in get_pas_object_vars_result.msg)
+        fail_msg: "Unexpected response from the variable-configured get_pas_object module: {{ get_pas_object_vars_result }}"
+        success_msg: "get_pas_object module configured by variables returned the expected response shape."
+
     - name: Expected-return-values | Fetch a credential via the lookup plugin
       ansible.builtin.set_fact:
         get_pas_object_lookup_result: >-

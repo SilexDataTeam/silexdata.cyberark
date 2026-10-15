@@ -73,6 +73,25 @@ EXAMPLES = r'''
     client_key: "{{ lookup('file', '/etc/ssl/client.key') }}"
   register: result
   no_log: true
+
+- name: Retrieve a password using client certificate and key files on the controller
+  silexdata.cyberark.get_pas_object:
+    url: https://cyberark.example.com
+    app_id: MyApp
+    object_query: "Safe=MySafe;Object=MyAccount"
+    client_cert_file: /etc/ssl/client.crt
+    client_key_file: /etc/ssl/client.key
+  register: result
+  no_log: true
+
+# The connection settings come from the controller's environment, for example
+# from an AAP credential that sets CYBERARK_CCP_URL, CYBERARK_CCP_APP_ID,
+# CYBERARK_CCP_CLIENT_CERT_FILE and CYBERARK_CCP_CLIENT_KEY_FILE.
+- name: Retrieve a password with the connection settings taken from the environment
+  silexdata.cyberark.get_pas_object:
+    object_query: "Safe=MySafe;Object=MyAccount"
+  register: result
+  no_log: true
 '''
 
 RETURN = r'''
