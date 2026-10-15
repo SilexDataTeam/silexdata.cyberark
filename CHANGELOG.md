@@ -2,12 +2,23 @@
 
 **Topics**
 
+- <a href="#v1-1-0">v1\.1\.0</a>
+    - <a href="#minor-changes">Minor Changes</a>
 - <a href="#v1-0-0">v1\.0\.0</a>
     - <a href="#release-summary">Release Summary</a>
     - <a href="#major-changes">Major Changes</a>
     - <a href="#new-plugins">New Plugins</a>
         - <a href="#lookup">Lookup</a>
     - <a href="#new-modules">New Modules</a>
+
+<a id="v1-1-0"></a>
+## v1\.1\.0
+
+<a id="minor-changes"></a>
+### Minor Changes
+
+* get\_pas\_object \- add the <code>client\_cert\_file</code> and <code>client\_key\_file</code> options\, to give the client certificate and key as paths to PEM files on the controller instead of as PEM content\.
+* get\_pas\_object \- the module and lookup plugin read each connection option they are not given \(<code>url</code>\, <code>app\_id</code>\, <code>webservice\_id</code>\, <code>verify</code> and the client certificate and key\) from a <code>cyberark\_ccp\_\*</code> Ansible variable\, then a <code>CYBERARK\_CCP\_\*</code> environment variable on the controller\.
 
 <a id="v1-0-0"></a>
 ## v1\.0\.0
